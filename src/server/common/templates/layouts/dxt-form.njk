@@ -31,8 +31,7 @@
       text: 'This is a new service - your feedback will help us to improve it.'
     }) }}
 
-    {% set checkTitle = pageTitle | string | lower %}
-    {% set isStartPage = pageTitle and ('check if you can apply' in checkTitle or 'find funding' in checkTitle) %}
+    {% set isStartPage = currentPage === 'start' %}
     {% if enableSbiSelector and (serviceUrl == '/find-funding-for-land-or-farms' or serviceUrl == '/adding-value') and isStartPage %}
 
       {{ sbiSelector({

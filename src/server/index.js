@@ -338,6 +338,18 @@ export async function createServer() {
     expiresIn: config.get('session.cache.ttl')
   })
 
+  server.ext('onPreResponse', (request, h) => {
+    const response = request.response
+    if (response.variety === 'view') {
+      response.source.context = {
+        ...(response.source.context || {}),
+        currentPath: request.path,
+        currentPage: request.path.split('/').filter(Boolean).pop()
+      }
+    }
+    return h.continue
+  })
+
   server.ext('onPreResponse', catchAll)
 
   return server
