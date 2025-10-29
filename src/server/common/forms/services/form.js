@@ -3,13 +3,21 @@ import { createLogger } from '~/src/server/common/helpers/logging/logger.js'
 import { metadata } from '../config.js'
 import { FileFormService } from '@defra/forms-engine-plugin/file-form-service.js'
 import path from 'node:path'
-import fs from 'node:fs/promises'
+import fs, { readFile } from 'node:fs/promises'
 import { parse as parseYaml } from 'yaml'
 import { notFound } from '@hapi/boom'
 import Joi from 'joi'
 
 // Simple in-memory cache of discovered forms metadata
 let formsCache = []
+
+async function loadSharedRedirectRules() {
+  const filePath = path.resolve(process.cwd(), 'src/server/common/forms/shared-redirect-rules.yaml')
+  const raw = await readFile(filePath, 'utf8')
+  const parsed = parseYaml(raw)
+
+  return parsed.sharedRedirectRules
+}
 
 export function getFormsCache() {
   return formsCache
@@ -148,7 +156,9 @@ export function validateGrantRedirectRules(form, definition) {
   //
   const { error: preError } = Joi.array().items(preSubmissionRuleSchema).length(1).validate(preSubmission)
   if (preError) {
-    throw new Error(`Invalid redirect rules in form ${formName}: ${preError.message}`)
+    throw new Error(
+      `Invalid redirect rules in form ${formName}: ${preError.message}. Expected one rule with toPath property.`
+    )
   }
 
   //
@@ -227,9 +237,17 @@ export const formsService = async () => {
   await addAllForms(loader, forms)
 
   const logger = createLogger()
+
+  const sharedRules = await loadSharedRedirectRules()
+
   for (const form of forms) {
     try {
       const definition = loader.getFormDefinition(form.id)
+      definition.metadata.grantRedirectRules = {
+        ...sharedRules,
+        ...definition.metadata.grantRedirectRules
+      }
+
       validateWhitelistConfiguration(form, definition)
       validateGrantRedirectRules(form, definition)
 
