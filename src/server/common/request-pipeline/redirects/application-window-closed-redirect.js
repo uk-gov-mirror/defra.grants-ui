@@ -1,4 +1,6 @@
 import { YarKeys } from '../../constants/session-keys.js'
+import { getGrantCode } from '../../helpers/grant-code.js'
+import { getFeatureControlValue } from '../../helpers/feature-controls/feature-control-client.js'
 import { isWindowClosedMockEnabled } from '../../helpers/mock-overrides.js'
 import { shouldHandlePreSubmission } from './forms-status-redirect.js'
 
@@ -7,12 +9,14 @@ import { shouldHandlePreSubmission } from './forms-status-redirect.js'
  * @param {import('@hapi/hapi').ResponseToolkit} h
  * @param {import('@defra/forms-engine-plugin/engine/types.js').FormContext} context
  */
-export function applicationWindowClosedRedirect(request, h, context) {
-  const def = /** @type {{ name?: string, metadata?: { isApplicationWindowOpen?: boolean } } | undefined} */ (
+export async function applicationWindowClosedRedirect(request, h, context) {
+  const def = /** @type {{ name?: string } | undefined} */ (
     /** @type {{ model?: { def?: unknown } }} */ (request.app).model?.def
   )
 
-  const isWindowClosed = def?.metadata?.isApplicationWindowOpen === false || isWindowClosedMockEnabled(request)
+  const featureControlValue = await getFeatureControlValue(`application-window-open:${getGrantCode(request)}`, request)
+
+  const isWindowClosed = featureControlValue === false || isWindowClosedMockEnabled(request)
 
   if (!isWindowClosed) {
     return h.continue

@@ -1,4 +1,6 @@
 import { getFormsCacheService } from '../../helpers/forms-cache/forms-cache.js'
+import { getGrantCode } from '../../helpers/grant-code.js'
+import { getFeatureControlValue } from '../../helpers/feature-controls/feature-control-client.js'
 import { isWindowClosedMockEnabled } from '../../helpers/mock-overrides.js'
 import {
   buildRedirectUrl,
@@ -50,10 +52,6 @@ function resolvePreSubmissionCandidate(request) {
     /** @type {{ model?: { def?: unknown } }} */ (request.app).model?.def
   )
 
-  if (def?.metadata?.isApplicationWindowOpen === false || isWindowClosedMockEnabled(request)) {
-    return null
-  }
-
   if (def?.startPage !== CHECK_DETAILS_START_PAGE) {
     return null
   }
@@ -82,6 +80,15 @@ export async function serviceRootRedirect(request, h) {
     }
 
     const { slug, preSubmissionRule } = candidate
+
+    const featureControlValue = await getFeatureControlValue(
+      `application-window-open:${getGrantCode(request)}`,
+      request
+    )
+
+    if (featureControlValue === false || isWindowClosedMockEnabled(request)) {
+      return h.continue
+    }
 
     const state = await getFormsCacheService(request.server).getState(request)
 

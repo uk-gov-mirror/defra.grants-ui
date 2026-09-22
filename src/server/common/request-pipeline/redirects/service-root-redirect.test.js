@@ -1,11 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { serviceRootRedirect } from './service-root-redirect.js'
 import { getFormsCacheService } from '../../helpers/forms-cache/forms-cache.js'
+import { getFeatureControlValue } from '../../helpers/feature-controls/feature-control-client.js'
 import { isWindowClosedMockEnabled } from '../../helpers/mock-overrides.js'
 import { mockHapiResponseToolkit } from '~/src/__mocks__'
 
 vi.mock('../../helpers/forms-cache/forms-cache.js', () => ({
   getFormsCacheService: vi.fn()
+}))
+
+vi.mock('../../helpers/feature-controls/feature-control-client.js', () => ({
+  getFeatureControlValue: vi.fn()
 }))
 
 vi.mock('../../helpers/mock-overrides.js', () => ({
@@ -23,6 +28,7 @@ describe('serviceRootRedirect', () => {
     getState = vi.fn().mockResolvedValue({ businessDetailsUpToDate: true })
     getFormsCacheService.mockReturnValue({ getState })
     vi.mocked(isWindowClosedMockEnabled).mockReturnValue(false)
+    vi.mocked(getFeatureControlValue).mockResolvedValue(true)
 
     h = mockHapiResponseToolkit()
 
@@ -99,7 +105,7 @@ describe('serviceRootRedirect', () => {
     {
       desc: 'the application window is closed',
       setup: () => {
-        request.app.model.def.metadata.isApplicationWindowOpen = false
+        vi.mocked(getFeatureControlValue).mockResolvedValue(false)
       }
     },
     {
